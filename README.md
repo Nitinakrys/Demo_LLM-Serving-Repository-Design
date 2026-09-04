@@ -11,12 +11,12 @@ docker/Dockerfile              # one image for every model (same on every branch
 src/start.sh                   # generic entrypoint, reads config from env vars
 src/custom_vllm_logger.py      # shared JSON logging wrapper
 models/<model>/config.env      # per-model identity (MODEL_NAME, GATED, MULTIMODAL) — same on every branch
-dev/<model>.env                # THIS BRANCH (Dev) ONLY — per-model GPU tuning for the dev environment (2x L40S)
+qa/<model>.env                 # THIS BRANCH (Qa) ONLY — per-model GPU tuning for the qa environment (2x L40S)
 scripts/deploy.sh              # merges models/<model>/config.env + <env-folder>/<model>.env, builds + runs the container
 .env.example                   # VLLM_API_KEY / HUGGING_FACE_HUB_TOKEN template
 ```
 
-`Qa` branch has the equivalent `qa/gemma-3-1b-it.env`, `qa/medgemma-4b.env`, `qa/medgemma-27b.env` instead of `dev/`. `main` branch has `main/` with the same three files, tuned for its H200 GPU.
+`Dev` branch has the equivalent `dev/gemma-3-1b-it.env`, `dev/medgemma-4b.env`, `dev/medgemma-27b.env` instead of `qa/`. `main` branch has `main/` with the same three files, tuned for its H200 GPU.
 
 ## Models × environments
 
@@ -35,8 +35,8 @@ On the target VM, on the branch matching that environment, from the repo root:
 ```bash
 cp .env.example .env   # fill in VLLM_API_KEY and HUGGING_FACE_HUB_TOKEN
 ./scripts/deploy.sh <model> <env-folder>
-# on this branch (Dev):
-./scripts/deploy.sh medgemma-27b dev
+# on this branch (Qa):
+./scripts/deploy.sh medgemma-27b qa
 ```
 
 All three models are gated on Hugging Face — accept Google's license on each model's page with the account that owns `HUGGING_FACE_HUB_TOKEN` before deploying.

@@ -24,13 +24,13 @@ jobs:
           filters: |
             gemma-3-1b-it:
               - 'models/gemma-3-1b-it/**'
-              - 'deployment/prod/gemma-3-1b-it.env'
+              - 'main/gemma-3-1b-it.env'
             medgemma-4b:
               - 'models/medgemma-4b/**'
-              - 'deployment/prod/medgemma-4b.env'
+              - 'main/medgemma-4b.env'
             medgemma-27b:
               - 'models/medgemma-27b/**'
-              - 'deployment/prod/medgemma-27b.env'
+              - 'main/medgemma-27b.env'
             common:
               - 'src/**'
               - 'docker/**'
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy gemma-3-1b-it to PROD
-        run: ./scripts/deploy.sh gemma-3-1b-it prod
+        run: ./scripts/deploy.sh gemma-3-1b-it main
 
   deploy-medgemma-4b:
     needs: detect-changes
@@ -54,7 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy medgemma-4b to PROD
-        run: ./scripts/deploy.sh medgemma-4b prod
+        run: ./scripts/deploy.sh medgemma-4b main
 
   deploy-medgemma-27b:
     needs: detect-changes
@@ -64,4 +64,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy medgemma-27b to PROD
-        run: ./scripts/deploy.sh medgemma-27b prod
+        run: ./scripts/deploy.sh medgemma-27b main

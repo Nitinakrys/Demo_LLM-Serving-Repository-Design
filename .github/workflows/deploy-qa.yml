@@ -1,0 +1,65 @@
+name: Deploy to QA
+
+# Qa branch -> deployment/qa/*.env (L40S, same GPUs as dev — only
+# LOG_LEVEL and traffic differ).
+on:
+  push:
+    branches: [Qa]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      gemma-3-1b-it: ${{ steps.changes.outputs.gemma-3-1b-it }}
+      medgemma-4b: ${{ steps.changes.outputs.medgemma-4b }}
+      medgemma-27b: ${{ steps.changes.outputs.medgemma-27b }}
+      common: ${{ steps.changes.outputs.common }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            gemma-3-1b-it:
+              - 'models/gemma-3-1b-it/**'
+              - 'deployment/qa/gemma-3-1b-it.env'
+            medgemma-4b:
+              - 'models/medgemma-4b/**'
+              - 'deployment/qa/medgemma-4b.env'
+            medgemma-27b:
+              - 'models/medgemma-27b/**'
+              - 'deployment/qa/medgemma-27b.env'
+            common:
+              - 'src/**'
+              - 'docker/**'
+              - 'scripts/**'
+
+  deploy-gemma-3-1b-it:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.gemma-3-1b-it == 'true' || needs.detect-changes.outputs.common == 'true'
+    runs-on: [self-hosted, qa-gpu]
+    environment: qa
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy gemma-3-1b-it to QA
+        run: ./scripts/deploy.sh gemma-3-1b-it qa
+
+  deploy-medgemma-4b:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.medgemma-4b == 'true' || needs.detect-changes.outputs.common == 'true'
+    runs-on: [self-hosted, qa-gpu]
+    environment: qa
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy medgemma-4b to QA
+        run: ./scripts/deploy.sh medgemma-4b qa
+
+  deploy-medgemma-27b:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.medgemma-27b == 'true' || needs.detect-changes.outputs.common == 'true'
+    runs-on: [self-hosted, qa-gpu]
+    environment: qa
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy medgemma-27b to QA
+        run: ./scripts/deploy.sh medgemma-27b qa

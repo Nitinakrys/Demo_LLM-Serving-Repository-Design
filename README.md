@@ -40,4 +40,14 @@ All three models are gated on Hugging Face — accept Google's license on each m
 
 ## Branch strategy
 
-`dev → qa → main`, matching the deploy environments of the same name — see the design doc's [Branch Strategy](llm-serving-repo-design.md#branch-strategy) section.
+Git branch names and `deployment/` folder names don't match 1:1 — that mapping is made explicit by the CI workflows in `.github/workflows/`, not left as tribal knowledge:
+
+| Branch | Pushes trigger | Deploys using | GPU |
+|---|---|---|---|
+| `Dev` | `deploy-dev.yml` | `deployment/dev/` | L40S |
+| `Qa` | `deploy-qa.yml` | `deployment/qa/` | L40S |
+| `main` | `deploy-prod.yml` | `deployment/prod/` | H200 |
+
+Note `main` deploys to `prod` (not a folder called `main`) — that's intentional, `main` is the branch, `prod` is the environment it deploys.
+
+Each workflow requires a self-hosted GitHub Actions runner on the corresponding GPU VM, tagged `dev-gpu` / `qa-gpu` / `prod-gpu` respectively. See the design doc's [Branch Strategy](llm-serving-repo-design.md#branch-strategy) section for the full PR/review flow.

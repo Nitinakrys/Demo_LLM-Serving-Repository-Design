@@ -1,0 +1,67 @@
+name: Deploy to PROD
+
+# main branch -> deployment/prod/*.env (H200). Note the branch is called
+# "main", not "prod" — the environment/folder is still named "prod" to
+# match what's actually running there; this workflow is what makes that
+# main -> prod mapping explicit instead of implicit tribal knowledge.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      gemma-3-1b-it: ${{ steps.changes.outputs.gemma-3-1b-it }}
+      medgemma-4b: ${{ steps.changes.outputs.medgemma-4b }}
+      medgemma-27b: ${{ steps.changes.outputs.medgemma-27b }}
+      common: ${{ steps.changes.outputs.common }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            gemma-3-1b-it:
+              - 'models/gemma-3-1b-it/**'
+              - 'deployment/prod/gemma-3-1b-it.env'
+            medgemma-4b:
+              - 'models/medgemma-4b/**'
+              - 'deployment/prod/medgemma-4b.env'
+            medgemma-27b:
+              - 'models/medgemma-27b/**'
+              - 'deployment/prod/medgemma-27b.env'
+            common:
+              - 'src/**'
+              - 'docker/**'
+              - 'scripts/**'
+
+  deploy-gemma-3-1b-it:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.gemma-3-1b-it == 'true' || needs.detect-changes.outputs.common == 'true'
+    runs-on: [self-hosted, prod-gpu]
+    environment: production    # requires approval — configure in repo Settings > Environments
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy gemma-3-1b-it to PROD
+        run: ./scripts/deploy.sh gemma-3-1b-it prod
+
+  deploy-medgemma-4b:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.medgemma-4b == 'true' || needs.detect-changes.outputs.common == 'true'
+    runs-on: [self-hosted, prod-gpu]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy medgemma-4b to PROD
+        run: ./scripts/deploy.sh medgemma-4b prod
+
+  deploy-medgemma-27b:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.medgemma-27b == 'true' || needs.detect-changes.outputs.common == 'true'
+    runs-on: [self-hosted, prod-gpu]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy medgemma-27b to PROD
+        run: ./scripts/deploy.sh medgemma-27b prod

@@ -4,50 +4,51 @@ One repo, one Docker image, three models, three environments. See [`llm-serving-
 
 ## Layout
 
+**Each branch carries only its own environment folder, named after the branch** — `Dev` has `dev/`, `Qa` has `qa/`, `main` has `main/`. You will not see all three side by side on any one branch; check out the branch for the environment you want.
+
 ```
-docker/Dockerfile              # one image for every model
+docker/Dockerfile              # one image for every model (same on every branch)
 src/start.sh                   # generic entrypoint, reads config from env vars
 src/custom_vllm_logger.py      # shared JSON logging wrapper
-models/<model>/config.env      # per-model identity (MODEL_NAME, GATED, MULTIMODAL)
-deployment/<env>/<model>.env   # per-(model,environment) GPU tuning (TP size, batch, context)
-scripts/deploy.sh              # merges the two configs above, builds + runs the container
+models/<model>/config.env      # per-model identity (MODEL_NAME, GATED, MULTIMODAL) — same on every branch
+dev/<model>.env                # THIS BRANCH (Dev) ONLY — per-model GPU tuning for the dev environment (2x L40S)
+scripts/deploy.sh              # merges models/<model>/config.env + <env-folder>/<model>.env, builds + runs the container
 .env.example                   # VLLM_API_KEY / HUGGING_FACE_HUB_TOKEN template
 ```
 
+`Qa` branch has the equivalent `qa/gemma-3-1b-it.env`, `qa/medgemma-4b.env`, `qa/medgemma-27b.env` instead of `dev/`. `main` branch has `main/` with the same three files, tuned for its H200 GPU.
+
 ## Models × environments
 
-| Model | dev / qa (2× L40S, 48GB each) | prod (H200, 141GB) |
+| Model | dev / qa (2× L40S, 48GB each) | main (1× H200, 141GB) |
 |---|---|---|
 | `gemma-3-1b-it` | TP=1, 8K ctx | TP=1, 32K ctx, higher concurrency |
 | `medgemma-4b` | TP=1, 8K ctx | TP=1, 32K ctx, higher concurrency |
 | `medgemma-27b` | **TP=2** (54GB weights need 2 GPUs) | **TP=1** (fits on one H200) |
 
-dev and qa run identical GPU tuning (both L40S) — they only differ in `LOG_LEVEL`. Prod's H200 has enough headroom to change tensor-parallel size for `medgemma-27b`, not just batch/context knobs.
+dev and qa run identical GPU tuning (both L40S) — they only differ in `LOG_LEVEL`. The H200 on `main` has enough headroom to change tensor-parallel size for `medgemma-27b`, not just batch/context knobs.
 
 ## Deploy
 
-On the target VM, from the repo root:
+On the target VM, on the branch matching that environment, from the repo root:
 
 ```bash
 cp .env.example .env   # fill in VLLM_API_KEY and HUGGING_FACE_HUB_TOKEN
-./scripts/deploy.sh <model> <environment>
-# e.g.
+./scripts/deploy.sh <model> <env-folder>
+# on this branch (Dev):
 ./scripts/deploy.sh medgemma-27b dev
-./scripts/deploy.sh medgemma-27b prod
 ```
 
 All three models are gated on Hugging Face — accept Google's license on each model's page with the account that owns `HUGGING_FACE_HUB_TOKEN` before deploying.
 
 ## Branch strategy
 
-Git branch names and `deployment/` folder names don't match 1:1 — that mapping is made explicit by the CI workflows in `.github/workflows/`, not left as tribal knowledge:
-
-| Branch | Pushes trigger | Deploys using | GPU |
+| Branch | Env folder on that branch | Pushes trigger | GPU |
 |---|---|---|---|
-| `Dev` | `deploy-dev.yml` | `deployment/dev/` | L40S |
-| `Qa` | `deploy-qa.yml` | `deployment/qa/` | L40S |
-| `main` | `deploy-prod.yml` | `deployment/prod/` | H200 |
-
-Note `main` deploys to `prod` (not a folder called `main`) — that's intentional, `main` is the branch, `prod` is the environment it deploys.
+| `Dev` | `dev/` | `deploy-dev.yml` | 2× L40S |
+| `Qa` | `qa/` | `deploy-qa.yml` | 2× L40S |
+| `main` | `main/` | `deploy-prod.yml` | 1× H200 |
 
 Each workflow requires a self-hosted GitHub Actions runner on the corresponding GPU VM, tagged `dev-gpu` / `qa-gpu` / `prod-gpu` respectively. See the design doc's [Branch Strategy](llm-serving-repo-design.md#branch-strategy) section for the full PR/review flow.
+
+> **Caveat:** because each branch's environment folder is named differently (`dev/` vs `qa/` vs `main/`), a plain `git merge` of `Dev → Qa → main` will not cleanly promote environment config the way the design doc describes — the promoted branch would need to keep renaming the incoming folder. Shared code (`docker/`, `src/`, `models/`, `scripts/`) merges fine since it's identical on every branch; only the environment folder needs manual reconciliation on merge.

@@ -23,13 +23,13 @@ jobs:
           filters: |
             gemma-3-1b-it:
               - 'models/gemma-3-1b-it/**'
-              - 'deployment/dev/gemma-3-1b-it.env'
+              - 'dev/gemma-3-1b-it.env'
             medgemma-4b:
               - 'models/medgemma-4b/**'
-              - 'deployment/dev/medgemma-4b.env'
+              - 'dev/medgemma-4b.env'
             medgemma-27b:
               - 'models/medgemma-27b/**'
-              - 'deployment/dev/medgemma-27b.env'
+              - 'dev/medgemma-27b.env'
             common:
               - 'src/**'
               - 'docker/**'

@@ -1,24 +1,26 @@
 #!/bin/bash
 #
-# Usage: ./scripts/deploy.sh <model> <environment>
-#   e.g. ./scripts/deploy.sh medgemma-27b prod
+# Usage: ./scripts/deploy.sh <model> <env-folder>
+#   e.g. ./scripts/deploy.sh medgemma-27b dev
 #
-# Run this ON the target VM (dev/qa/prod GPU server), from the repo root.
-# It merges models/<model>/config.env (identity) with
-# deployment/<environment>/<model>.env (GPU/environment-specific tuning),
-# then builds and (re)starts the container.
+# Run this ON the target VM, from the repo root, on the branch matching
+# that environment (Dev branch has a dev/ folder, Qa branch has qa/, main
+# branch has main/ — each branch carries only its own environment folder,
+# not all three). It merges models/<model>/config.env (identity) with
+# <env-folder>/<model>.env (GPU/environment-specific tuning), then builds
+# and (re)starts the container.
 
 set -e
 
-MODEL="${1:?Usage: $0 <model> <environment>}"
-ENVIRONMENT="${2:?Usage: $0 <model> <environment>}"
+MODEL="${1:?Usage: $0 <model> <env-folder>}"
+ENVIRONMENT="${2:?Usage: $0 <model> <env-folder>}"
 
 MODEL_CONFIG="models/${MODEL}/config.env"
-ENV_CONFIG="deployment/${ENVIRONMENT}/${MODEL}.env"
+ENV_CONFIG="${ENVIRONMENT}/${MODEL}.env"
 
 for f in "$MODEL_CONFIG" "$ENV_CONFIG"; do
   if [ ! -f "$f" ]; then
-    echo "ERROR: $f not found (unknown model or environment?)" >&2
+    echo "ERROR: $f not found (unknown model, or wrong branch checked out for this environment?)" >&2
     exit 1
   fi
 done

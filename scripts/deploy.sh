@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Usage: ./scripts/deploy.sh <model> <env-folder>
-#   e.g. ./scripts/deploy.sh medgemma-27b dev
+#   e.g. ./scripts/deploy.sh medgemma-27b-it dev
 #
 # Run this ON the target VM, from the repo root, on the branch matching
 # that environment (Dev branch has a dev/ folder, Qa branch has qa/, main

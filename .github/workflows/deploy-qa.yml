@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       gemma-4-31b-it: ${{ steps.changes.outputs.gemma-4-31b-it }}
-      medgemma-4b: ${{ steps.changes.outputs.medgemma-4b }}
-      medgemma-27b: ${{ steps.changes.outputs.medgemma-27b }}
+      medgemma-1-5-4b-it: ${{ steps.changes.outputs.medgemma-1-5-4b-it }}
+      medgemma-27b-it: ${{ steps.changes.outputs.medgemma-27b-it }}
       common: ${{ steps.changes.outputs.common }}
     steps:
       - uses: actions/checkout@v4
@@ -23,12 +23,12 @@ jobs:
             gemma-4-31b-it:
               - 'models/gemma-4-31b-it/**'
               - 'qa/gemma-4-31b-it.env'
-            medgemma-4b:
-              - 'models/medgemma-4b/**'
-              - 'qa/medgemma-4b.env'
-            medgemma-27b:
-              - 'models/medgemma-27b/**'
-              - 'qa/medgemma-27b.env'
+            medgemma-1-5-4b-it:
+              - 'models/medgemma-1.5-4b-it/**'
+              - 'qa/medgemma-1.5-4b-it.env'
+            medgemma-27b-it:
+              - 'models/medgemma-27b-it/**'
+              - 'qa/medgemma-27b-it.env'
             common:
               - 'src/**'
               - 'docker/**'
@@ -44,22 +44,25 @@ jobs:
       - name: Deploy gemma-4-31b-it to QA
         run: ./scripts/deploy.sh gemma-4-31b-it qa
 
-  deploy-medgemma-4b:
+  # Job id can't contain dots (GitHub Actions requirement) — the model
+  # identifier itself (medgemma-1.5-4b-it, matching models/ and qa/ paths)
+  # keeps the dot; only the job id / output key swap it for a hyphen.
+  deploy-medgemma-1-5-4b-it:
     needs: detect-changes
-    if: needs.detect-changes.outputs.medgemma-4b == 'true' || needs.detect-changes.outputs.common == 'true'
+    if: needs.detect-changes.outputs.medgemma-1-5-4b-it == 'true' || needs.detect-changes.outputs.common == 'true'
     runs-on: [self-hosted, qa-gpu]
     environment: qa
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy medgemma-4b to QA
-        run: ./scripts/deploy.sh medgemma-4b qa
+      - name: Deploy medgemma-1.5-4b-it to QA
+        run: ./scripts/deploy.sh medgemma-1.5-4b-it qa
 
-  deploy-medgemma-27b:
+  deploy-medgemma-27b-it:
     needs: detect-changes
-    if: needs.detect-changes.outputs.medgemma-27b == 'true' || needs.detect-changes.outputs.common == 'true'
+    if: needs.detect-changes.outputs.medgemma-27b-it == 'true' || needs.detect-changes.outputs.common == 'true'
     runs-on: [self-hosted, qa-gpu]
     environment: qa
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy medgemma-27b to QA
-        run: ./scripts/deploy.sh medgemma-27b qa
+      - name: Deploy medgemma-27b-it to QA
+        run: ./scripts/deploy.sh medgemma-27b-it qa

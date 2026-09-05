@@ -16,17 +16,17 @@ scripts/deploy.sh              # merges models/<model>/config.env + <env-folder>
 .env.example                   # VLLM_API_KEY / HUGGING_FACE_HUB_TOKEN template
 ```
 
-`Dev` branch has the equivalent `dev/gemma-4-31b-it.env`, `dev/medgemma-4b.env`, `dev/medgemma-27b.env` instead of `qa/`. `main` branch has `main/` with the same three files, tuned for its H200 GPU.
+`Dev` branch has the equivalent `dev/gemma-4-31b-it.env`, `dev/medgemma-1.5-4b-it.env`, `dev/medgemma-27b-it.env` instead of `qa/`. `main` branch has `main/` with the same three files, tuned for its H200 GPU.
 
 ## Models × environments
 
 | Model | dev / qa (2× L40S, 48GB each) | main (1× H200, 141GB) |
 |---|---|---|
 | `gemma-4-31b-it` | **TP=2**, 8K ctx | TP=1, 32K ctx, higher concurrency |
-| `medgemma-4b` | TP=1, 8K ctx | TP=1, 32K ctx, higher concurrency |
-| `medgemma-27b` | **TP=2** (54GB weights need 2 GPUs) | **TP=1** (fits on one H200) |
+| `medgemma-1.5-4b-it` | TP=1, 8K ctx | TP=1, 32K ctx, higher concurrency |
+| `medgemma-27b-it` | **TP=2** (54GB weights need 2 GPUs) | **TP=1** (fits on one H200) |
 
-dev and qa run identical GPU tuning (both L40S) — they only differ in `LOG_LEVEL`. The H200 on `main` has enough headroom to change tensor-parallel size for `medgemma-27b`, not just batch/context knobs.
+dev and qa run identical GPU tuning (both L40S) — they only differ in `LOG_LEVEL`. The H200 on `main` has enough headroom to change tensor-parallel size for `medgemma-27b-it`, not just batch/context knobs.
 
 ## Deploy
 
@@ -36,7 +36,7 @@ On the target VM, on the branch matching that environment, from the repo root:
 cp .env.example .env   # fill in VLLM_API_KEY and HUGGING_FACE_HUB_TOKEN
 ./scripts/deploy.sh <model> <env-folder>
 # on this branch (Qa):
-./scripts/deploy.sh medgemma-27b qa
+./scripts/deploy.sh medgemma-27b-it qa
 ```
 
 All three models are gated on Hugging Face — accept Google's license on each model's page with the account that owns `HUGGING_FACE_HUB_TOKEN` before deploying.

@@ -27,29 +27,29 @@ llm-serving/
 │   │   ├── config.env                # MODEL_NAME, MODEL_PATH, TENSOR_PARALLEL_SIZE, MAX_MODEL_LEN
 │   │   └── README.md                 # Model card: what it does, limits, versions
 │   │
-│   ├── medgemma-4b/
+│   ├── medgemma-1.5-4b-it/
 │   │   ├── config.env
 │   │   └── README.md
 │   │
-│   └── medgemma-27b/
+│   └── medgemma-27b-it/
 │       ├── config.env
 │       └── README.md
 │
 ├── deployment/
 │   ├── dev/
 │   │   ├── gemma-1b-it.env           # DEV overrides: LOG_LEVEL=DEBUG, GPU_COUNT=1
-│   │   ├── medgemma-4b.env
-│   │   └── medgemma-27b.env
+│   │   ├── medgemma-1.5-4b-it.env
+│   │   └── medgemma-27b-it.env
 │   │
 │   ├── qa/
 │   │   ├── gemma-1b-it.env           # QA overrides: LOG_LEVEL=INFO
-│   │   ├── medgemma-4b.env
-│   │   └── medgemma-27b.env
+│   │   ├── medgemma-1.5-4b-it.env
+│   │   └── medgemma-27b-it.env
 │   │
 │   └── prod/
 │       ├── gemma-1b-it.env           # PROD overrides: LOG_LEVEL=WARNING
-│       ├── medgemma-4b.env
-│       └── medgemma-27b.env
+│       ├── medgemma-1.5-4b-it.env
+│       └── medgemma-27b-it.env
 │
 ├── benchmarks/
 │   ├── datasets/
@@ -60,10 +60,10 @@ llm-serving/
 │   ├── gemma-1b-it/
 │   │   └── results/                  # Versioned benchmark results
 │   │
-│   ├── medgemma-4b/
+│   ├── medgemma-1.5-4b-it/
 │   │   └── results/
 │   │
-│   └── medgemma-27b/
+│   └── medgemma-27b-it/
 │       └── results/
 │
 ├── tests/
@@ -121,7 +121,7 @@ feature/*          ← developers work here
    main            ← auto-deploys to PRODUCTION
      │
      ▼
-    TAG            ← e.g. medgemma-4b-v1.2.0
+    TAG            ← e.g. medgemma-1.5-4b-it-v1.2.0
 ```
 
 ### Branch Rules
@@ -147,10 +147,10 @@ DTYPE=float16
 GPU_MEMORY_UTILIZATION=0.85
 ```
 
-### models/medgemma-4b/config.env
+### models/medgemma-1.5-4b-it/config.env
 
 ```bash
-MODEL_NAME=medgemma-4b
+MODEL_NAME=medgemma-1.5-4b-it
 MODEL_PATH=/models/medgemma-v1.5-4b
 TENSOR_PARALLEL_SIZE=1
 MAX_MODEL_LEN=8192
@@ -158,11 +158,11 @@ DTYPE=float16
 GPU_MEMORY_UTILIZATION=0.90
 ```
 
-### models/medgemma-27b/config.env
+### models/medgemma-27b-it/config.env
 
 ```bash
-MODEL_NAME=medgemma-27b
-MODEL_PATH=/models/medgemma-27b
+MODEL_NAME=medgemma-27b-it
+MODEL_PATH=/models/medgemma-27b-it
 TENSOR_PARALLEL_SIZE=2
 MAX_MODEL_LEN=4096
 DTYPE=bfloat16
@@ -173,7 +173,7 @@ GPU_MEMORY_UTILIZATION=0.92
 
 ## Environment Overrides
 
-### deployment/dev/medgemma-4b.env
+### deployment/dev/medgemma-1.5-4b-it.env
 
 ```bash
 LOG_LEVEL=DEBUG
@@ -182,7 +182,7 @@ SERVER_HOST=dev-gpu-01
 GPU_COUNT=1
 ```
 
-### deployment/qa/medgemma-4b.env
+### deployment/qa/medgemma-1.5-4b-it.env
 
 ```bash
 LOG_LEVEL=INFO
@@ -191,7 +191,7 @@ SERVER_HOST=qa-gpu-01
 GPU_COUNT=1
 ```
 
-### deployment/prod/medgemma-4b.env
+### deployment/prod/medgemma-1.5-4b-it.env
 
 ```bash
 LOG_LEVEL=WARNING
@@ -287,11 +287,11 @@ Every production release gets a tag:
 gemma-1b-it-v1.0.0
 gemma-1b-it-v1.1.0
 
-medgemma-4b-v1.0.0
-medgemma-4b-v1.1.0
-medgemma-4b-v2.0.0      ← model version upgrade
+medgemma-1.5-4b-it-v1.0.0
+medgemma-1.5-4b-it-v1.1.0
+medgemma-1.5-4b-it-v2.0.0      ← model version upgrade
 
-medgemma-27b-v1.0.0
+medgemma-27b-it-v1.0.0
 ```
 
 Tag format: `{model}-v{major}.{minor}.{patch}`
@@ -376,8 +376,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       gemma-1b: ${{ steps.changes.outputs.gemma-1b }}
-      medgemma-4b: ${{ steps.changes.outputs.medgemma-4b }}
-      medgemma-27b: ${{ steps.changes.outputs.medgemma-27b }}
+      medgemma-1-5-4b-it: ${{ steps.changes.outputs.medgemma-1-5-4b-it }}
+      medgemma-27b-it: ${{ steps.changes.outputs.medgemma-27b-it }}
       common: ${{ steps.changes.outputs.common }}
     steps:
       - uses: actions/checkout@v4
@@ -388,12 +388,12 @@ jobs:
             gemma-1b:
               - 'models/gemma-1b-it/**'
               - 'deployment/dev/gemma-1b-it.env'
-            medgemma-4b:
-              - 'models/medgemma-4b/**'
-              - 'deployment/dev/medgemma-4b.env'
-            medgemma-27b:
-              - 'models/medgemma-27b/**'
-              - 'deployment/dev/medgemma-27b.env'
+            medgemma-1-5-4b-it:
+              - 'models/medgemma-1.5-4b-it/**'
+              - 'deployment/dev/medgemma-1.5-4b-it.env'
+            medgemma-27b-it:
+              - 'models/medgemma-27b-it/**'
+              - 'deployment/dev/medgemma-27b-it.env'
             common:
               - 'src/**'
               - 'docker/**'
@@ -419,23 +419,23 @@ jobs:
       - name: Deploy Gemma 1B IT to DEV
         run: echo "SSH to dev server → pull image → restart gemma-1b-it container"
 
-  deploy-medgemma-4b:
+  deploy-medgemma-1-5-4b-it:
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.medgemma-4b == 'true' || needs.detect-changes.outputs.common == 'true'
+    if: needs.detect-changes.outputs.medgemma-1-5-4b-it == 'true' || needs.detect-changes.outputs.common == 'true'
     runs-on: ubuntu-latest
     environment: dev
     steps:
       - name: Deploy MedGemma 4B to DEV
-        run: echo "SSH to dev server → pull image → restart medgemma-4b container"
+        run: echo "SSH to dev server → pull image → restart medgemma-1.5-4b-it container"
 
-  deploy-medgemma-27b:
+  deploy-medgemma-27b-it:
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.medgemma-27b == 'true' || needs.detect-changes.outputs.common == 'true'
+    if: needs.detect-changes.outputs.medgemma-27b-it == 'true' || needs.detect-changes.outputs.common == 'true'
     runs-on: ubuntu-latest
     environment: dev
     steps:
       - name: Deploy MedGemma 27B to DEV
-        run: echo "SSH to dev server → pull image → restart medgemma-27b container"
+        run: echo "SSH to dev server → pull image → restart medgemma-27b-it container"
 ```
 
 ### .github/workflows/deploy-prod.yml
@@ -514,11 +514,11 @@ Production problem detected
          │
          ▼
 Check current tag
-   medgemma-4b-v1.2.0
+   medgemma-1.5-4b-it-v1.2.0
          │
          ▼
 Rollback command
-   ./scripts/rollback.sh medgemma-4b v1.1.0
+   ./scripts/rollback.sh medgemma-1.5-4b-it v1.1.0
          │
          ▼
 Server pulls previous image
@@ -542,10 +542,10 @@ Done — investigate the issue on dev
 
 2. **Branches = release flow, not models.** `dev → qa → main` is about code maturity. Models are deployment targets configured via env files.
 
-3. **Smart deployments.** If only `models/medgemma-4b/` changed, only the MedGemma 4B server gets redeployed. Gemma 1B IT and MedGemma 27B stay untouched.
+3. **Smart deployments.** If only `models/medgemma-1.5-4b-it/` changed, only the MedGemma 4B server gets redeployed. Gemma 1B IT and MedGemma 27B stay untouched.
 
 4. **Model weights stay out of Git.** Weights live in HuggingFace / object storage / local cache on the GPU server. Git tracks code + config only.
 
-5. **Tag every production release.** `medgemma-4b-v1.2.0` tells you exactly what's running and lets you rollback in seconds.
+5. **Tag every production release.** `medgemma-1.5-4b-it-v1.2.0` tells you exactly what's running and lets you rollback in seconds.
 
 6. **Secrets never in the repo.** Use GitHub Secrets + environment variables on the server. Commit `.env.example`, never `.env`.

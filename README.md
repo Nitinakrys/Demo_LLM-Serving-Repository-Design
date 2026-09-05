@@ -49,6 +49,14 @@ All three models are gated on Hugging Face — accept Google's license on each m
 | `Qa` | `qa/` | `deploy-qa.yml` | 2× L40S |
 | `main` | `main/` | `deploy-prod.yml` | 1× H200 |
 
-Each workflow requires a self-hosted GitHub Actions runner on the corresponding GPU VM, tagged `dev-gpu` / `qa-gpu` / `prod-gpu` respectively. See the design doc's [Branch Strategy](llm-serving-repo-design.md#branch-strategy) section for the full PR/review flow.
+Each workflow requires a self-hosted GitHub Actions runner on the corresponding GPU VM. `Qa`/`main` each deploy to a single VM, tagged `qa-gpu` / `prod-gpu`. `Dev` is split across **three separate VMs** — one per model, since they don't share the same GPU count — so each `Dev` VM needs its own runner label instead of a shared `dev-gpu`:
+
+| Model | Dev VM | GPUs | Runner label |
+|---|---|---|---|
+| `medgemma-1.5-4b-it` | VM A | 1× L40S | `dev-4b` |
+| `gemma-4-31b-it` | VM B | 2× L40S | `dev-gemma` |
+| `medgemma-27b-it` | VM C | 2× L40S | `dev-27b` |
+
+Register each VM's runner with its matching label, e.g. `./config.sh --labels self-hosted,dev-4b` on VM A. See the design doc's [Branch Strategy](llm-serving-repo-design.md#branch-strategy) section for the full PR/review flow.
 
 > **Caveat:** because each branch's environment folder is named differently (`dev/` vs `qa/` vs `main/`), a plain `git merge` of `Dev → Qa → main` will not cleanly promote environment config the way the design doc describes — the promoted branch would need to keep renaming the incoming folder. Shared code (`docker/`, `src/`, `models/`, `scripts/`) merges fine since it's identical on every branch; only the environment folder needs manual reconciliation on merge.

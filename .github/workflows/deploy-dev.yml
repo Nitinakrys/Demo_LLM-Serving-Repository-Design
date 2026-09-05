@@ -35,10 +35,16 @@ jobs:
               - 'docker/**'
               - 'scripts/**'
 
+  # Each model is pinned to its own VM via a VM-specific runner label —
+  # not the shared "dev-gpu" label — since the three dev VMs have
+  # different GPU counts (1x for medgemma-1.5-4b-it, 2x each for the
+  # other two) and a TP=2 model landing on the 1-GPU VM (or vice versa)
+  # would fail to initialize / OOM. Register each VM's runner with the
+  # matching label, e.g. ./config.sh --labels self-hosted,dev-4b
   deploy-gemma-4-31b-it:
     needs: detect-changes
     if: needs.detect-changes.outputs.gemma-4-31b-it == 'true' || needs.detect-changes.outputs.common == 'true'
-    runs-on: [self-hosted, dev-gpu]
+    runs-on: [self-hosted, dev-gemma]
     environment: dev
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +57,7 @@ jobs:
   deploy-medgemma-1-5-4b-it:
     needs: detect-changes
     if: needs.detect-changes.outputs.medgemma-1-5-4b-it == 'true' || needs.detect-changes.outputs.common == 'true'
-    runs-on: [self-hosted, dev-gpu]
+    runs-on: [self-hosted, dev-4b]
     environment: dev
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +67,7 @@ jobs:
   deploy-medgemma-27b-it:
     needs: detect-changes
     if: needs.detect-changes.outputs.medgemma-27b-it == 'true' || needs.detect-changes.outputs.common == 'true'
-    runs-on: [self-hosted, dev-gpu]
+    runs-on: [self-hosted, dev-27b]
     environment: dev
     steps:
       - uses: actions/checkout@v4

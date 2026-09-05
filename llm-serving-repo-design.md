@@ -2,221 +2,221 @@
 
 ## Your Three Models
 
-| Model | Use Case | Approx Size | GPU Needs |
-|-------|----------|-------------|-----------|
-| Gemma 3 1B IT | Lightweight inference, edge | ~2 GB | 1× GPU |
-| MedGemma 1.5 4B | Medical Q&A, translation, OCR | ~8 GB | 1× GPU |
-| MedGemma 27B | Advanced medical reasoning | ~54 GB | 2–4× GPU |
+| Model | `MODEL_NAME` | Use Case | Approx Size | GPU Needs (dev/qa) | GPU Needs (prod) |
+|-------|-------------|----------|-------------|---------------------|-------------------|
+| Gemma 4 31B IT | `google/gemma-4-31B-it` | General text-only inference | ~62 GB (bf16) | TP=2 (2× L40S 48GB) | TP=1 (1× H200 141GB) |
+| MedGemma 1.5 4B | `google/medgemma-1.5-4b-it` | Medical Q&A, translation, OCR | ~8 GB | TP=1 (1× L40S) | TP=1 (1× H200) |
+| MedGemma 27B | `google/medgemma-27b-it` | Advanced medical reasoning | ~54 GB (bf16) | TP=2 (2× L40S 48GB) | TP=1 (1× H200 141GB) |
+
+All three are multimodal except `gemma-4-31b-it`, which is text-only. All three are gated on Hugging Face.
 
 ---
 
 ## Repository Structure
 
+Unlike a single-branch repo, **each branch here carries a different tree** — only its own environment folder and workflow file, not all three side by side. This is the actual layout on the `Dev` branch:
+
 ```
-llm-serving/
+Demo_LLM-Serving-Repository-Design/
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml                    # Lint, unit tests, Docker build on every PR
-│       ├── deploy-dev.yml            # Auto-deploy to DEV on merge to dev
-│       ├── deploy-qa.yml             # Auto-deploy to QA on merge to qa
-│       └── deploy-prod.yml           # Deploy to PROD on merge to main (with approval)
+│       └── deploy-dev.yml            # THIS BRANCH ONLY — Qa has deploy-qa.yml, main has deploy-prod.yml
 │
 ├── models/
-│   ├── gemma-1b-it/
-│   │   ├── config.env                # MODEL_NAME, MODEL_PATH, TENSOR_PARALLEL_SIZE, MAX_MODEL_LEN
-│   │   └── README.md                 # Model card: what it does, limits, versions
-│   │
+│   ├── gemma-4-31b-it/
+│   │   └── config.env                # MODEL_NAME, GATED, MULTIMODAL — identical on every branch
 │   ├── medgemma-1.5-4b-it/
-│   │   ├── config.env
-│   │   └── README.md
-│   │
+│   │   └── config.env
 │   └── medgemma-27b-it/
-│       ├── config.env
-│       └── README.md
+│       └── config.env
 │
-├── deployment/
-│   ├── dev/
-│   │   ├── gemma-1b-it.env           # DEV overrides: LOG_LEVEL=DEBUG, GPU_COUNT=1
-│   │   ├── medgemma-1.5-4b-it.env
-│   │   └── medgemma-27b-it.env
-│   │
-│   ├── qa/
-│   │   ├── gemma-1b-it.env           # QA overrides: LOG_LEVEL=INFO
-│   │   ├── medgemma-1.5-4b-it.env
-│   │   └── medgemma-27b-it.env
-│   │
-│   └── prod/
-│       ├── gemma-1b-it.env           # PROD overrides: LOG_LEVEL=WARNING
-│       ├── medgemma-1.5-4b-it.env
-│       └── medgemma-27b-it.env
-│
-├── benchmarks/
-│   ├── datasets/
-│   │   ├── medical_qa.json           # Standard medical Q&A test set
-│   │   ├── translation_pairs.json    # Hindi/Tamil/etc. translation pairs
-│   │   └── ocr_samples/              # Sample images for OCR testing
-│   │
-│   ├── gemma-1b-it/
-│   │   └── results/                  # Versioned benchmark results
-│   │
-│   ├── medgemma-1.5-4b-it/
-│   │   └── results/
-│   │
-│   └── medgemma-27b-it/
-│       └── results/
-│
-├── tests/
-│   ├── unit/
-│   │   ├── test_config_loader.py
-│   │   └── test_logger.py
-│   │
-│   ├── integration/
-│   │   ├── test_health_endpoint.py
-│   │   └── test_api_contract.py
-│   │
-│   └── inference/
-│       ├── test_model_loading.py     # Does the model load? GPU detected?
-│       ├── test_chat_completion.py   # Basic chat/completion works?
-│       └── test_medical_qa.py        # Domain-specific sanity checks
+├── dev/                               # THIS BRANCH ONLY — Qa has qa/, main has main/
+│   ├── gemma-4-31b-it.env             # GPU/environment tuning: TP, dtype, ctx len, GPU_COUNT, LOG_LEVEL
+│   ├── medgemma-1.5-4b-it.env
+│   └── medgemma-27b-it.env
 │
 ├── scripts/
-│   ├── benchmark.py                  # Run accuracy/latency/VRAM benchmarks
-│   ├── health_check.py               # Hit /health endpoint, verify GPU status
-│   ├── model_test.py                 # Quick inference smoke test
-│   ├── deploy.sh                     # Pull image + restart container on target server
-│   └── rollback.sh                   # Revert to previous image tag
+│   └── deploy.sh                      # merges models/<model>/config.env + <env-folder>/<model>.env, builds + runs the container
 │
 ├── src/
-│   ├── custom_vllm_logger.py         # Shared across all models
-│   └── start.sh                      # Generic entrypoint, reads config.env
+│   ├── custom_vllm_logger.py          # shared JSON logging wrapper, same on every branch
+│   └── start.sh                       # generic entrypoint, reads config from env vars, same on every branch
 │
 ├── docker/
-│   ├── Dockerfile                    # Default: latest stable vLLM
-│   └── Dockerfile.vllm028            # Pinned version if a model needs it
+│   └── Dockerfile                     # one image for every model, same on every branch
 │
-├── docker-compose.dev.yml            # Local dev: spin up one model for testing
-├── .env.example                      # Template — never commit real secrets
-├── .gitignore
+├── .env                                # tracked with empty placeholder values (see below)
+├── .env.example                        # VLLM_API_KEY / HUGGING_FACE_HUB_TOKEN template
+├── .gitignore                          # ignores .secrets/ (deploy.sh's runtime secret mount, never .env itself)
 └── README.md
 ```
+
+There is no `benchmarks/`, `tests/`, `ci.yml`, `docker-compose.dev.yml`, `rollback.sh`, or per-model `README.md` in this repo today — see [Not Yet Implemented](#not-yet-implemented) if you want to add any of these later.
 
 ---
 
 ## Branch Strategy
 
 ```
-feature/*          ← developers work here
-     │
-     │  PR (code review)
-     ▼
-    dev            ← auto-deploys to DEV environment
-     │
-     │  PR (CI must pass: unit + integration + inference smoke test)
-     ▼
-    qa             ← auto-deploys to QA environment
-     │
-     │  PR (QA benchmarks must pass + manual approval)
-     ▼
-   main            ← auto-deploys to PRODUCTION
-     │
-     ▼
-    TAG            ← e.g. medgemma-1.5-4b-it-v1.2.0
+Dev            ← auto-deploys to DEV environment (3 GPU VMs, one per model)
+ │
+ │  PR
+ ▼
+Qa             ← auto-deploys to QA environment (shared 2× L40S per model)
+ │
+ │  PR
+ ▼
+main           ← auto-deploys to PRODUCTION (1× H200 per model)
 ```
 
 ### Branch Rules
 
-| Branch | Who merges | Required checks | Deploy target |
-|--------|-----------|-----------------|---------------|
-| `dev` | Any developer via PR | Unit tests, Docker build, lint | DEV GPU server |
-| `qa` | Dev lead via PR from dev | All CI + inference smoke test | QA GPU server |
-| `main` | Tech lead via PR from qa | All CI + QA benchmarks + approval | PROD servers |
+| Branch | Env folder on that branch | Workflow | GPU |
+|--------|---------------------------|----------|-----|
+| `Dev` | `dev/` | `deploy-dev.yml` | 3 VMs: 1× L40S (4B), 2× L40S (Gemma 31B), 2× L40S (MedGemma 27B) |
+| `Qa` | `qa/` | `deploy-qa.yml` | 2× L40S per model |
+| `main` | `main/` | `deploy-prod.yml` | 1× H200 per model |
+
+> **Caveat:** because each branch's environment folder is named differently (`dev/` vs `qa/` vs `main/`), a plain `git merge Dev → Qa → main` will **not** cleanly promote environment config — the promoted branch would need to keep renaming the incoming folder, and would also pull in the source branch's workflow file. In practice, promote via `git cherry-pick` of the specific commits, then manually reconcile the destination branch's own env folder and workflow file. Shared code (`docker/`, `src/`, `models/`, `scripts/`) merges/cherry-picks cleanly since it's identical on every branch.
 
 ---
 
 ## Model Configuration Files
 
-### models/gemma-1b-it/config.env
+### models/gemma-4-31b-it/config.env
 
 ```bash
-MODEL_NAME=gemma-1b-it
-MODEL_PATH=/models/gemma-4-31b-it
-TENSOR_PARALLEL_SIZE=1
-MAX_MODEL_LEN=8192
-DTYPE=float16
-GPU_MEMORY_UTILIZATION=0.85
+# Identity + model-level defaults only. GPU/environment-specific tuning
+# (tensor-parallel-size, batch sizes, context length) lives in
+# deployment/<env>/gemma-4-31b-it.env instead, since it varies by which GPU
+# this actually runs on, not by the model itself.
+
+MODEL_NAME=google/gemma-4-31B-it
+# GATED on Hugging Face — accept Google's license on the model page with the
+# account that owns HUGGING_FACE_HUB_TOKEN before deploying.
+GATED=true
+# Text-only — no vision encoder, so LIMIT_MM_PER_PROMPT is never set for
+# this model in any environment.
+MULTIMODAL=false
 ```
 
 ### models/medgemma-1.5-4b-it/config.env
 
 ```bash
-MODEL_NAME=medgemma-1.5-4b-it
-MODEL_PATH=/models/medgemma-v1.5-4b
-TENSOR_PARALLEL_SIZE=1
-MAX_MODEL_LEN=8192
-DTYPE=float16
-GPU_MEMORY_UTILIZATION=0.90
+# Identity + model-level defaults only. GPU/environment-specific tuning
+# lives in deployment/<env>/medgemma-1.5-4b-it.env instead.
+
+MODEL_NAME=google/medgemma-1.5-4b-it
+# GATED on Hugging Face — accept Google's license/usage terms on the model
+# page with the account that owns HUGGING_FACE_HUB_TOKEN before deploying.
+GATED=true
+# Multimodal (text + image) — used for medical Q&A, translation, OCR.
+MULTIMODAL=true
 ```
 
 ### models/medgemma-27b-it/config.env
 
 ```bash
-MODEL_NAME=medgemma-27b-it
-MODEL_PATH=/models/medgemma-27b-it
-TENSOR_PARALLEL_SIZE=2
-MAX_MODEL_LEN=4096
-DTYPE=bfloat16
-GPU_MEMORY_UTILIZATION=0.92
+# Identity + model-level defaults only. GPU/environment-specific tuning
+# lives in deployment/<env>/medgemma-27b-it.env instead — notably
+# TENSOR_PARALLEL_SIZE, which drops from 2 (dev/qa, 2x L40S 48GB) to 1
+# (prod, 1x H200 141GB) since the ~54GB of weights fits on a single H200.
+
+MODEL_NAME=google/medgemma-27b-it
+# GATED on Hugging Face — accept Google's license/usage terms on the model
+# page with the account that owns HUGGING_FACE_HUB_TOKEN before deploying.
+# If you specifically need the text-only variant, use
+# google/medgemma-27b-text-it instead and set MULTIMODAL=false below.
+GATED=true
+# Multimodal (text + image) — advanced medical reasoning.
+MULTIMODAL=true
 ```
 
 ---
 
-## Environment Overrides
+## Environment Overrides (Dev branch, `dev/`)
 
-### deployment/dev/medgemma-1.5-4b-it.env
+### dev/gemma-4-31b-it.env
 
 ```bash
-LOG_LEVEL=DEBUG
 ENVIRONMENT=dev
-SERVER_HOST=dev-gpu-01
-GPU_COUNT=1
+GPU_TYPE=L40S
+GPU_COUNT=2
+LOG_LEVEL=DEBUG
+
+TENSOR_PARALLEL_SIZE=2
+DTYPE=float16
+MAX_MODEL_LEN=8192
+GPU_MEMORY_UTILIZATION=0.85
+MAX_NUM_SEQS=64
+MAX_NUM_BATCHED_TOKENS=8192
 ```
 
-### deployment/qa/medgemma-1.5-4b-it.env
+### dev/medgemma-1.5-4b-it.env
 
 ```bash
-LOG_LEVEL=INFO
-ENVIRONMENT=qa
-SERVER_HOST=qa-gpu-01
+ENVIRONMENT=dev
+GPU_TYPE=L40S
 GPU_COUNT=1
+LOG_LEVEL=DEBUG
+
+TENSOR_PARALLEL_SIZE=1
+DTYPE=float16
+MAX_MODEL_LEN=8192
+GPU_MEMORY_UTILIZATION=0.90
+MAX_NUM_SEQS=32
+MAX_NUM_BATCHED_TOKENS=8192
+LIMIT_MM_PER_PROMPT={"image": 4}
 ```
 
-### deployment/prod/medgemma-1.5-4b-it.env
+### dev/medgemma-27b-it.env
 
 ```bash
-LOG_LEVEL=WARNING
-ENVIRONMENT=prod
-SERVER_HOST=server-130
-GPU_COUNT=1
+ENVIRONMENT=dev
+GPU_TYPE=L40S
+GPU_COUNT=2
+LOG_LEVEL=DEBUG
+
+# ~54GB of BF16 weights don't fit on a single 48GB L40S, so TP=2 is
+# required here, not optional (sharded to ~27GB/GPU).
+TENSOR_PARALLEL_SIZE=2
+DTYPE=bfloat16
+MAX_MODEL_LEN=4096
+GPU_MEMORY_UTILIZATION=0.92
+MAX_NUM_SEQS=16
+MAX_NUM_BATCHED_TOKENS=8192
+LIMIT_MM_PER_PROMPT={"image": 4}
 ```
+
+`Qa`'s `qa/*.env` files are identical to these except `ENVIRONMENT=qa` and `LOG_LEVEL=INFO`. `main`'s `main/*.env` files run on a single H200 each — `TENSOR_PARALLEL_SIZE=1` even for `medgemma-27b-it` (fits on one H200's 141GB), with much higher `MAX_MODEL_LEN`/`MAX_NUM_SEQS` since there's more headroom.
 
 ---
 
 ## Generic Dockerfile
 
 ```dockerfile
+# One image for every model — no model-specific code baked in. Everything
+# comes from env vars at runtime (see src/start.sh). Built FROM the official
+# vLLM image rather than a bare CUDA base + hand-pinned torch/transformers,
+# since that image ships the exact tested combination for this vLLM release
+# and already includes Gemma 3 / MedGemma (`Gemma3ForConditionalGeneration`)
+# support.
+#
+# If `vllm serve` fails with an unrecognized model_type error, this tag
+# predates that support — bump the tag below (see
+# hub.docker.com/r/vllm/vllm-openai/tags) or use vllm/vllm-openai:latest.
 FROM vllm/vllm-openai:v0.28.0
 
 WORKDIR /app
 
-# Common code — same for every model
+# Common code — same for every model, every environment.
 COPY src/start.sh src/custom_vllm_logger.py ./
-
 RUN chmod +x start.sh
 
-# No model-specific config baked in
-# Everything comes from config.env at runtime
-
+# The base image sets ENTRYPOINT ["vllm", "serve"]; reset it so CMD below
+# runs our wrapper directly instead of being appended as arguments to
+# `vllm serve`.
 ENTRYPOINT []
 CMD ["./start.sh"]
 ```
@@ -229,153 +229,140 @@ CMD ["./start.sh"]
 #!/bin/bash
 set -euo pipefail
 
-# These come from config.env + environment overrides
-MODEL_NAME="${MODEL_NAME:?MODEL_NAME is required}"
-MODEL_PATH="${MODEL_PATH:?MODEL_PATH is required}"
+# Generic entrypoint shared by every model. Nothing here is model- or
+# GPU-specific — all of that comes from environment variables assembled by
+# scripts/deploy.sh from models/<model>/config.env (identity) +
+# deployment/<env>/<model>.env (GPU/environment-specific tuning).
+#
+# This is what lets the SAME image run gemma-4-31b-it and medgemma-27b-it
+# tensor-parallel across 2 L40S in dev/qa, or as a single process on one
+# H200 in prod — only the env vars change.
+
+MODEL_NAME="${MODEL_NAME:?MODEL_NAME is required (set in models/<model>/config.env)}"
 TENSOR_PARALLEL_SIZE="${TENSOR_PARALLEL_SIZE:-1}"
+DTYPE="${DTYPE:-bfloat16}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-8192}"
-DTYPE="${DTYPE:-float16}"
 GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.90}"
-LOG_LEVEL="${LOG_LEVEL:-INFO}"
+MAX_NUM_SEQS="${MAX_NUM_SEQS:-32}"
+MAX_NUM_BATCHED_TOKENS="${MAX_NUM_BATCHED_TOKENS:-8192}"
+# Optional — only set for multimodal models (e.g. '{"image": 4}'); omitted
+# entirely for text-only models like gemma-4-31b-it.
+LIMIT_MM_PER_PROMPT="${LIMIT_MM_PER_PROMPT:-}"
+
+# Secrets are mounted as files (see scripts/deploy.sh), not passed as
+# plaintext env vars, so they don't show up in `docker inspect`.
+if [ -f /run/secrets/vllm_api_key ]; then
+  VLLM_API_KEY="$(cat /run/secrets/vllm_api_key)"
+fi
+if [ -f /run/secrets/hf_token ]; then
+  export HUGGING_FACE_HUB_TOKEN="$(cat /run/secrets/hf_token)"
+fi
+
+if [ -z "${VLLM_API_KEY:-}" ]; then
+  echo "ERROR: VLLM_API_KEY not found at /run/secrets/vllm_api_key" >&2
+  exit 1
+fi
+if [ -z "${HUGGING_FACE_HUB_TOKEN:-}" ]; then
+  echo "ERROR: HUGGING_FACE_HUB_TOKEN not found at /run/secrets/hf_token (required — all three models are gated on Hugging Face)" >&2
+  exit 1
+fi
 
 echo "========================================"
-echo "  Model:    ${MODEL_NAME}"
-echo "  Path:     ${MODEL_PATH}"
-echo "  TP:       ${TENSOR_PARALLEL_SIZE}"
-echo "  MaxLen:   ${MAX_MODEL_LEN}"
-echo "  Dtype:    ${DTYPE}"
-echo "  Env:      ${ENVIRONMENT:-unknown}"
+echo "  Model:       ${MODEL_NAME}"
+echo "  Env:         ${ENVIRONMENT:-unknown}"
+echo "  GPU type:    ${GPU_TYPE:-unknown}"
+echo "  TP:          ${TENSOR_PARALLEL_SIZE}"
+echo "  MaxLen:      ${MAX_MODEL_LEN}"
+echo "  Dtype:       ${DTYPE}"
+echo "  MaxNumSeqs:  ${MAX_NUM_SEQS}"
 echo "========================================"
 
-exec vllm serve "${MODEL_PATH}" \
-    --served-model-name "${MODEL_NAME}" \
-    --tensor-parallel-size "${TENSOR_PARALLEL_SIZE}" \
-    --max-model-len "${MAX_MODEL_LEN}" \
-    --dtype "${DTYPE}" \
-    --gpu-memory-utilization "${GPU_MEMORY_UTILIZATION}" \
-    --host 0.0.0.0 \
-    --port 8000
+ARGS=(
+  --model "${MODEL_NAME}"
+  --download-dir /var/lib/vllm_models/model
+  --tensor-parallel-size "${TENSOR_PARALLEL_SIZE}"
+  --dtype "${DTYPE}"
+  --gpu-memory-utilization "${GPU_MEMORY_UTILIZATION}"
+  --max-num-seqs "${MAX_NUM_SEQS}"
+  --max-model-len "${MAX_MODEL_LEN}"
+  --max-num-batched-tokens "${MAX_NUM_BATCHED_TOKENS}"
+  --enable-chunked-prefill
+  --enable-prefix-caching
+  --block-size 16
+  --no-enable-log-requests
+  --port 8000
+  --api-key "${VLLM_API_KEY}"
+)
+
+if [ -n "${LIMIT_MM_PER_PROMPT}" ]; then
+  ARGS+=(--limit-mm-per-prompt "${LIMIT_MM_PER_PROMPT}")
+fi
+
+exec python3 custom_vllm_logger.py "${ARGS[@]}"
 ```
 
 ---
 
-## Server Mapping (Production)
+## scripts/deploy.sh
 
+Run on the target VM, from the repo root, on the branch matching that environment:
+
+```bash
+cp .env.example .env   # fill in VLLM_API_KEY and HUGGING_FACE_HUB_TOKEN
+./scripts/deploy.sh <model> <env-folder>
+# e.g. on the Dev branch:
+./scripts/deploy.sh medgemma-27b-it dev
 ```
-                    Docker Image
-                  llm-serving:v1.2.0
-                         │
-          ┌──────────────┼──────────────┐
-          ▼              ▼              ▼
-       Server A       Server B       Server C
-       1× GPU         1× GPU         2–4× GPU
-       Gemma 1B IT    MedGemma 4B    MedGemma 27B
-       config.env     config.env     config.env
-          │              │              │
-         vLLM           vLLM           vLLM
-          │              │              │
-        :8000          :8000          :8000
-```
+
+It resolves `models/<model>/config.env` + `<env-folder>/<model>.env`, then:
+1. Writes `VLLM_API_KEY`/`HUGGING_FACE_HUB_TOKEN` to files under `.secrets/<model>-<env>/` (mounted read-only into the container) instead of passing them as plaintext `-e` env vars, so they don't show up in `docker inspect`.
+2. Stops/removes any existing container named `<model>-<env>`.
+3. `docker build`s the shared image and `docker run --gpus all`s it, binding port 8000.
 
 ---
 
-## Tagging Strategy
+## Server Mapping — Dev Environment
 
-Every production release gets a tag:
-
-```
-gemma-1b-it-v1.0.0
-gemma-1b-it-v1.1.0
-
-medgemma-1.5-4b-it-v1.0.0
-medgemma-1.5-4b-it-v1.1.0
-medgemma-1.5-4b-it-v2.0.0      ← model version upgrade
-
-medgemma-27b-it-v1.0.0
-```
-
-Tag format: `{model}-v{major}.{minor}.{patch}`
-
-- **major** → model version change (e.g. MedGemma v1.5 → v2.0)
-- **minor** → config change, vLLM upgrade, new features
-- **patch** → bug fix, logging change, minor tweak
-
-### Docker image tags
+Dev is split across **three separate VMs**, one per model, since they don't share the same GPU count. Each VM needs its own self-hosted GitHub Actions runner label so `deploy-dev.yml` routes each model's deploy job to the right machine:
 
 ```
-registry/llm-serving:v1.2.0              ← code version
-registry/llm-serving:v1.2.0-sha-abc123   ← with git commit
+                    Docker Image (same image, different env vars)
+                              │
+          ┌───────────────────┼───────────────────┐
+          ▼                   ▼                   ▼
+       VM A                VM B                VM C
+       1× L40S              2× L40S              2× L40S
+       MedGemma 1.5 4B      Gemma 4 31B          MedGemma 27B
+       runner: dev-4b       runner: dev-gemma    runner: dev-27b
+          │                   │                   │
+         vLLM                vLLM                vLLM
+          │                   │                   │
+        :8000               :8000               :8000
 ```
+
+Register each VM's runner with its matching label, e.g. on VM A:
+```bash
+./config.sh --url https://github.com/Nitinakrys/Demo_LLM-Serving-Repository-Design --token <TOKEN> --labels self-hosted,dev-4b
+```
+
+`Qa` and `main` each deploy all three models to a single VM (tagged `qa-gpu` / `prod-gpu` respectively) — only `Dev` needs per-model runner labels, since it's the only environment split across multiple physical machines.
 
 ---
 
-## CI/CD Workflows
-
-### .github/workflows/ci.yml — Runs on every PR
-
-```yaml
-name: CI
-
-on:
-  pull_request:
-    branches: [dev, qa, main]
-
-jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install ruff
-      - run: ruff check .
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install -r requirements.txt
-      - run: pytest tests/unit/ -v
-
-  docker-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: docker build -f docker/Dockerfile -t llm-serving:test .
-
-  config-validation:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate all model configs
-        run: |
-          for config in models/*/config.env; do
-            echo "Validating $config"
-            source "$config"
-            [ -z "$MODEL_NAME" ] && echo "FAIL: MODEL_NAME missing in $config" && exit 1
-            [ -z "$MODEL_PATH" ] && echo "FAIL: MODEL_PATH missing in $config" && exit 1
-          done
-          echo "All configs valid"
-```
-
-### .github/workflows/deploy-dev.yml
+## CI/CD Workflow — .github/workflows/deploy-dev.yml (actual, current)
 
 ```yaml
 name: Deploy to DEV
 
 on:
   push:
-    branches: [dev]
+    branches: [Dev]
 
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      gemma-1b: ${{ steps.changes.outputs.gemma-1b }}
+      gemma-4-31b-it: ${{ steps.changes.outputs.gemma-4-31b-it }}
       medgemma-1-5-4b-it: ${{ steps.changes.outputs.medgemma-1-5-4b-it }}
       medgemma-27b-it: ${{ steps.changes.outputs.medgemma-27b-it }}
       common: ${{ steps.changes.outputs.common }}
@@ -385,167 +372,82 @@ jobs:
         id: changes
         with:
           filters: |
-            gemma-1b:
-              - 'models/gemma-1b-it/**'
-              - 'deployment/dev/gemma-1b-it.env'
+            gemma-4-31b-it:
+              - 'models/gemma-4-31b-it/**'
+              - 'dev/gemma-4-31b-it.env'
             medgemma-1-5-4b-it:
               - 'models/medgemma-1.5-4b-it/**'
-              - 'deployment/dev/medgemma-1.5-4b-it.env'
+              - 'dev/medgemma-1.5-4b-it.env'
             medgemma-27b-it:
               - 'models/medgemma-27b-it/**'
-              - 'deployment/dev/medgemma-27b-it.env'
+              - 'dev/medgemma-27b-it.env'
             common:
               - 'src/**'
               - 'docker/**'
-              - 'Dockerfile'
+              - 'scripts/**'
 
-  build:
-    runs-on: ubuntu-latest
+  deploy-gemma-4-31b-it:
     needs: detect-changes
+    if: needs.detect-changes.outputs.gemma-4-31b-it == 'true' || needs.detect-changes.outputs.common == 'true'
+    runs-on: [self-hosted, dev-gemma]
+    environment: dev
     steps:
       - uses: actions/checkout@v4
-      - name: Build and push Docker image
-        run: |
-          IMAGE_TAG="dev-$(git rev-parse --short HEAD)"
-          docker build -f docker/Dockerfile -t registry/llm-serving:${IMAGE_TAG} .
-          docker push registry/llm-serving:${IMAGE_TAG}
+      - name: Deploy gemma-4-31b-it to DEV
+        run: ./scripts/deploy.sh gemma-4-31b-it dev
 
-  deploy-gemma-1b:
-    needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.gemma-1b == 'true' || needs.detect-changes.outputs.common == 'true'
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - name: Deploy Gemma 1B IT to DEV
-        run: echo "SSH to dev server → pull image → restart gemma-1b-it container"
-
+  # Job id can't contain dots (GitHub Actions requirement) — the model
+  # identifier itself (medgemma-1.5-4b-it, matching models/ and dev/ paths)
+  # keeps the dot; only the job id / output key swap it for a hyphen.
   deploy-medgemma-1-5-4b-it:
-    needs: [detect-changes, build]
+    needs: detect-changes
     if: needs.detect-changes.outputs.medgemma-1-5-4b-it == 'true' || needs.detect-changes.outputs.common == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, dev-4b]
     environment: dev
     steps:
-      - name: Deploy MedGemma 4B to DEV
-        run: echo "SSH to dev server → pull image → restart medgemma-1.5-4b-it container"
+      - uses: actions/checkout@v4
+      - name: Deploy medgemma-1.5-4b-it to DEV
+        run: ./scripts/deploy.sh medgemma-1.5-4b-it dev
 
   deploy-medgemma-27b-it:
-    needs: [detect-changes, build]
+    needs: detect-changes
     if: needs.detect-changes.outputs.medgemma-27b-it == 'true' || needs.detect-changes.outputs.common == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, dev-27b]
     environment: dev
     steps:
-      - name: Deploy MedGemma 27B to DEV
-        run: echo "SSH to dev server → pull image → restart medgemma-27b-it container"
-```
-
-### .github/workflows/deploy-prod.yml
-
-```yaml
-name: Deploy to PROD
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment: production    # ← requires approval in GitHub settings
-    steps:
       - uses: actions/checkout@v4
-      - name: Deploy to production servers
-        run: |
-          echo "Deploying approved image to production"
-          # Same pattern as DEV but targets prod servers
+      - name: Deploy medgemma-27b-it to DEV
+        run: ./scripts/deploy.sh medgemma-27b-it dev
 ```
+
+`deploy-qa.yml` and `deploy-prod.yml` follow the identical pattern — only the branch trigger (`Qa`/`main`), runner label (`qa-gpu`/`prod-gpu`), `environment:` name (`qa`/`production`), and the `deploy.sh` env-folder argument (`qa`/`main`) differ. `deploy-prod.yml`'s jobs also set `environment: production`, which requires manual approval if configured under **Settings → Environments** in GitHub.
+
+Unlike an earlier draft of this doc, there is **no separate `build` job** pushing to an image registry — `deploy.sh` builds the image locally on the target VM as part of the same run, since each VM only ever runs its own model(s) and there's no shared registry in this design yet.
 
 ---
 
-## QA Evaluation Matrix
+## Not Yet Implemented
 
-When a PR reaches `qa`, run these checks per model:
+These were ideas from an earlier draft of this doc — not present in the repo today. Worth reconsidering if the project grows:
 
-### Model Loading
-
-| Check | Gemma 1B IT | MedGemma 4B | MedGemma 27B |
-|-------|:-----------:|:-----------:|:------------:|
-| Downloads from cache | ✓ | ✓ | ✓ |
-| Loads into GPU | ✓ | ✓ | ✓ |
-| Tokenizer works | ✓ | ✓ | ✓ |
-| CUDA detected | ✓ | ✓ | ✓ |
-
-### Functional
-
-| Check | Gemma 1B IT | MedGemma 4B | MedGemma 27B |
-|-------|:-----------:|:-----------:|:------------:|
-| Chat completion | ✓ | ✓ | ✓ |
-| Medical Q&A | — | ✓ | ✓ |
-| Translation (Indian langs) | — | ✓ | ✓ |
-| OCR | — | ✓ | — |
-| General reasoning | ✓ | — | ✓ |
-
-### Performance (compare against previous version)
-
-| Metric | Gemma 1B IT | MedGemma 4B | MedGemma 27B |
-|--------|-------------|-------------|--------------|
-| TTFT | < 200ms | < 500ms | < 1s |
-| Tokens/sec | > 80 | > 40 | > 20 |
-| Latency (p95) | < 1s | < 3s | < 5s |
-| VRAM | < 4 GB | < 12 GB | < 48 GB |
-
-### Regression Report (auto-generated)
-
-```
-                     Old         New        Verdict
-Accuracy (med QA)    84.2%       87.1%      ✅ improved
-Latency (p95)        2.1s        2.3s       ⚠️ 9.5% slower
-VRAM                 10.2 GB     10.5 GB    ✅ within budget
-Tokens/sec           42          39         ⚠️ 7% slower
-
-Overall: PASS (accuracy improved, perf within tolerance)
-```
-
----
-
-## Rollback Procedure
-
-```
-Production problem detected
-         │
-         ▼
-Check current tag
-   medgemma-1.5-4b-it-v1.2.0
-         │
-         ▼
-Rollback command
-   ./scripts/rollback.sh medgemma-1.5-4b-it v1.1.0
-         │
-         ▼
-Server pulls previous image
-   registry/llm-serving:v1.1.0
-         │
-         ▼
-Restart container with old config
-         │
-         ▼
-Verify health check
-         │
-         ▼
-Done — investigate the issue on dev
-```
+- **`benchmarks/`, `tests/`** — no unit/integration/inference test suite or benchmark datasets exist yet.
+- **`ci.yml`** — no lint/test/build-validation workflow runs on PRs yet; only the three deploy-on-push workflows exist.
+- **Tagging strategy / rollback** — no `{model}-v{major}.{minor}.{patch}` git tags or `scripts/rollback.sh` exist; rolling back today means re-deploying an older commit by hand.
+- **QA Evaluation Matrix / regression reports** — no automated accuracy/latency/VRAM comparison step exists in `deploy-qa.yml`.
+- **Docker image registry** — images are built locally on each VM by `deploy.sh`, not pushed to/pulled from a shared registry.
 
 ---
 
 ## Key Principles
 
-1. **One repo, one Docker image, three configs.** The same `llm-serving` image runs on all servers. Only `config.env` differs.
+1. **One repo, one Docker image, three model configs.** The same image (built from `docker/Dockerfile`) runs every model — only the env vars passed in at `docker run` differ.
 
-2. **Branches = release flow, not models.** `dev → qa → main` is about code maturity. Models are deployment targets configured via env files.
+2. **Branches = environments, not code-maturity stages alone.** `Dev`/`Qa`/`main` map 1:1 to `dev`/`qa`/`prod` GPU infrastructure — each branch carries only its own environment folder and workflow file, not all three.
 
-3. **Smart deployments.** If only `models/medgemma-1.5-4b-it/` changed, only the MedGemma 4B server gets redeployed. Gemma 1B IT and MedGemma 27B stay untouched.
+3. **Smart deployments.** `detect-changes` + `dorny/paths-filter` mean only the model(s) whose config actually changed get redeployed; a change to shared code (`src/`, `docker/`, `scripts/`) redeploys all three.
 
-4. **Model weights stay out of Git.** Weights live in HuggingFace / object storage / local cache on the GPU server. Git tracks code + config only.
+4. **Model weights stay out of Git.** Weights are downloaded by vLLM from Hugging Face at container start into `/var/lib/vllm_models` on the host — Git tracks code + config only.
 
-5. **Tag every production release.** `medgemma-1.5-4b-it-v1.2.0` tells you exactly what's running and lets you rollback in seconds.
+5. **Secrets never committed in plaintext.** `.env` is tracked with empty placeholder values only; real secrets go in an untracked local `.env` copy on each VM, and `deploy.sh` mounts them into the container as files under `/run/secrets`, not as plaintext env vars.
 
-6. **Secrets never in the repo.** Use GitHub Secrets + environment variables on the server. Commit `.env.example`, never `.env`.
+6. **Promotion between branches is a manual cherry-pick, not a merge** — see the [Branch Strategy](#branch-strategy) caveat above.

@@ -7,7 +7,7 @@ set -euo pipefail
 # deployment/<env>/<model>.env (GPU/environment-specific tuning).
 #
 # This is what lets the SAME image run gemma-4-31b-it on a single L40S and
-# medgemma-27b tensor-parallel across 2 L40S in dev/qa, or as a single
+# medgemma-27b-it tensor-parallel across 2 L40S in dev/qa, or as a single
 # process on one H200 in prod — only the env vars change.
 
 MODEL_NAME="${MODEL_NAME:?MODEL_NAME is required (set in models/<model>/config.env)}"

@@ -12,7 +12,7 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      gemma-3-1b-it: ${{ steps.changes.outputs.gemma-3-1b-it }}
+      gemma-4-31b-it: ${{ steps.changes.outputs.gemma-4-31b-it }}
       medgemma-4b: ${{ steps.changes.outputs.medgemma-4b }}
       medgemma-27b: ${{ steps.changes.outputs.medgemma-27b }}
       common: ${{ steps.changes.outputs.common }}
@@ -22,9 +22,9 @@ jobs:
         id: changes
         with:
           filters: |
-            gemma-3-1b-it:
-              - 'models/gemma-3-1b-it/**'
-              - 'main/gemma-3-1b-it.env'
+            gemma-4-31b-it:
+              - 'models/gemma-4-31b-it/**'
+              - 'main/gemma-4-31b-it.env'
             medgemma-4b:
               - 'models/medgemma-4b/**'
               - 'main/medgemma-4b.env'
@@ -36,15 +36,15 @@ jobs:
               - 'docker/**'
               - 'scripts/**'
 
-  deploy-gemma-3-1b-it:
+  deploy-gemma-4-31b-it:
     needs: detect-changes
-    if: needs.detect-changes.outputs.gemma-3-1b-it == 'true' || needs.detect-changes.outputs.common == 'true'
+    if: needs.detect-changes.outputs.gemma-4-31b-it == 'true' || needs.detect-changes.outputs.common == 'true'
     runs-on: [self-hosted, prod-gpu]
     environment: production    # requires approval — configure in repo Settings > Environments
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy gemma-3-1b-it to PROD
-        run: ./scripts/deploy.sh gemma-3-1b-it main
+      - name: Deploy gemma-4-31b-it to PROD
+        run: ./scripts/deploy.sh gemma-4-31b-it main
 
   deploy-medgemma-4b:
     needs: detect-changes

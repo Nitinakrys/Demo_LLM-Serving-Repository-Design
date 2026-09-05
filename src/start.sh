@@ -6,7 +6,7 @@ set -euo pipefail
 # scripts/deploy.sh from models/<model>/config.env (identity) +
 # deployment/<env>/<model>.env (GPU/environment-specific tuning).
 #
-# This is what lets the SAME image run gemma-4-31b-it and medgemma-27b
+# This is what lets the SAME image run gemma-4-31b-it and medgemma-27b-it
 # tensor-parallel across 2 L40S in dev/qa, or as a single process on one
 # H200 in prod — only the env vars change.
 

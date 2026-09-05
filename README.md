@@ -16,13 +16,13 @@ scripts/deploy.sh              # merges models/<model>/config.env + <env-folder>
 .env.example                   # VLLM_API_KEY / HUGGING_FACE_HUB_TOKEN template
 ```
 
-`Qa` branch has the equivalent `qa/gemma-3-1b-it.env`, `qa/medgemma-4b.env`, `qa/medgemma-27b.env` instead of `dev/`. `main` branch has `main/` with the same three files, tuned for its H200 GPU.
+`Qa` branch has the equivalent `qa/gemma-4-31b-it.env`, `qa/medgemma-4b.env`, `qa/medgemma-27b.env` instead of `dev/`. `main` branch has `main/` with the same three files, tuned for its H200 GPU.
 
 ## Models × environments
 
 | Model | dev / qa (2× L40S, 48GB each) | main (1× H200, 141GB) |
 |---|---|---|
-| `gemma-3-1b-it` | TP=1, 8K ctx | TP=1, 32K ctx, higher concurrency |
+| `gemma-4-31b-it` | **TP=2**, 8K ctx | TP=1, 32K ctx, higher concurrency |
 | `medgemma-4b` | TP=1, 8K ctx | TP=1, 32K ctx, higher concurrency |
 | `medgemma-27b` | **TP=2** (54GB weights need 2 GPUs) | **TP=1** (fits on one H200) |
 

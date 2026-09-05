@@ -140,7 +140,7 @@ feature/*          ← developers work here
 
 ```bash
 MODEL_NAME=gemma-1b-it
-MODEL_PATH=/models/gemma-3-1b-it
+MODEL_PATH=/models/gemma-4-31b-it
 TENSOR_PARALLEL_SIZE=1
 MAX_MODEL_LEN=8192
 DTYPE=float16

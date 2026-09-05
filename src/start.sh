@@ -6,9 +6,9 @@ set -euo pipefail
 # scripts/deploy.sh from models/<model>/config.env (identity) +
 # deployment/<env>/<model>.env (GPU/environment-specific tuning).
 #
-# This is what lets the SAME image run gemma-3-1b-it on a single L40S and
-# medgemma-27b tensor-parallel across 2 L40S in dev/qa, or as a single
-# process on one H200 in prod — only the env vars change.
+# This is what lets the SAME image run gemma-4-31b-it and medgemma-27b
+# tensor-parallel across 2 L40S in dev/qa, or as a single process on one
+# H200 in prod — only the env vars change.
 
 MODEL_NAME="${MODEL_NAME:?MODEL_NAME is required (set in models/<model>/config.env)}"
 TENSOR_PARALLEL_SIZE="${TENSOR_PARALLEL_SIZE:-1}"
@@ -18,7 +18,7 @@ GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.90}"
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-32}"
 MAX_NUM_BATCHED_TOKENS="${MAX_NUM_BATCHED_TOKENS:-8192}"
 # Optional — only set for multimodal models (e.g. '{"image": 4}'); omitted
-# entirely for text-only models like gemma-3-1b-it.
+# entirely for text-only models like gemma-4-31b-it.
 LIMIT_MM_PER_PROMPT="${LIMIT_MM_PER_PROMPT:-}"
 
 # Secrets are mounted as files (see scripts/deploy.sh), not passed as
